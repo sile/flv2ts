@@ -1,4 +1,4 @@
-OPT=-O2 -Wall -Werror -Iinclude
+OPT=-g -Wall -Werror -Iinclude
 
 all: parse-flv
 

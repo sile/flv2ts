@@ -2,6 +2,7 @@
 #define FLV2TS_AUX_BYTE_STREAM_HH
 
 #include <inttypes.h>
+#include <string.h>
 
 namespace flv2ts {
   namespace aux {
@@ -39,6 +40,11 @@ namespace flv2ts {
         uint32_t v = (_cur[0]<<24) + (_cur[1]<<16) + (_cur[2]<<8) + _cur[3];
         _cur += 4;
         return v;
+      }
+
+      void read(uint8_t* buf, size_t buf_size) {
+        memcpy(buf, _cur, buf_size);
+        _cur += buf_size;
       }
 
       bool abs_seek(size_t pos) {

@@ -3,10 +3,14 @@
 
 #include "header.hh"
 #include "tag.hh"
+#include "audio_tag.hh"
+#include "video_tag.hh"
+#include "script_data_tag.hh"
 #include <aux/file_mapped_memory.hh>
 #include <aux/byte_stream.hh>
-#include <inttypes.h>
+#include <string>
 #include <string.h>
+#include <inttypes.h>
 
 namespace flv2ts {
   namespace flv {
@@ -51,6 +55,7 @@ namespace flv2ts {
         prev_tag_size = _in.readUint32Be();
         if(_in.eos()) {
           // last tag
+          memset(&tag, 0, sizeof(tag)); 
           return true;
         } else {
           return parseTagImpl(tag);
@@ -90,14 +95,56 @@ namespace flv2ts {
           return false;
         }
         
+        switch(tag.type) {
+        case Tag::TYPE_AUDIO:       return parseAudioTag(tag);
+        case Tag::TYPE_VIDEO:       return parseVideoTag(tag);
+        case Tag::TYPE_SCRIPT_DATA: return parseScriptDataTag(tag);
+        default:                    return false;  // undefined tag type
+        }
+      }
+
+      bool parseAudioTag(Tag& tag) {
+        _buf.resize(sizeof(AudioTag) + tag.data_size);
+        
+        AudioTag* audio = reinterpret_cast<AudioTag*>(const_cast<char*>(_buf.data())); // XXX:
+
+        uint8_t tmp = _in.readUint8();
+        audio->sound_format = (tmp & 0xF0) >> 4;
+        audio->sound_rate   = (tmp & 0x0C) >> 2;
+        audio->sound_size   = (tmp & 0x02) >> 1;
+        audio->sound_type   = (tmp & 0x01);
+
+        if(audio->sound_format == 10) { // AAC
+          audio->aac_packet_type = _in.readUint8();
+        }
+        
+        audio->payload = reinterpret_cast<uint8_t*>(audio) + audio->headerSize();
+        _in.read(audio->payload, audio->payloadSize(tag));
+        
+        tag.data = static_cast<TagData*>(audio);
+        return true;
+      }
+
+      bool parseVideoTag(Tag& tag) {
         _in.rel_seek(tag.data_size);
-                     
+        
+        return true;
+      }
+
+      bool parseScriptDataTag(Tag& tag) {
+        _buf.resize(tag.data_size);
+
+        ScriptDataTag* script_data = reinterpret_cast<ScriptDataTag*>(const_cast<char*>(_buf.data())); // XXX:
+        _in.read(script_data->amf0_payload, tag.data_size);
+
+        tag.data = static_cast<TagData*>(script_data);
         return true;
       }
 
     private:
       aux::FileMappedMemory _fmm;
       aux::ByteStream _in;
+      std::string _buf;
     };
   }
 }

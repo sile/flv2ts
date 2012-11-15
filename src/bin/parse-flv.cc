@@ -54,8 +54,29 @@ int main(int argc, char** argv) {
               << "  type:      " << (int)tag.type << std::endl
               << "  data_size: " << tag.data_size << std::endl
               << "  timestamp: " << tag.timestamp << std::endl
-              << "  stream_id: " << tag.stream_id << std::endl
-              << std::endl;
+              << "  stream_id: " << tag.stream_id << std::endl;
+    switch(tag.type) {
+    case flv2ts::flv::Tag::TYPE_SCRIPT_DATA: {
+      std::cout << "  [script_data]" << std::endl
+                << "    payload_size: " << tag.data_size << std::endl;
+      break;
+    }
+    case flv2ts::flv::Tag::TYPE_AUDIO: {
+      const flv2ts::flv::AudioTag& audio = *reinterpret_cast<flv2ts::flv::AudioTag*>(tag.data);
+      std::cout << "  [audio]" << std::endl
+                << "    sound_format: " << (int)audio.sound_format << std::endl
+                << "    sound_rate:   " << (int)audio.sound_rate << std::endl
+                << "    sound_size:   " << (int)audio.sound_size << std::endl
+                << "    sound_type:   " << (int)audio.sound_type << std::endl;
+      if(audio.sound_format == 10) {
+        std::cout << "    acc_packate_type: " << (int)audio.aac_packet_type << std::endl;
+      }
+      std::cout << "    payload_size: " << audio.payloadSize(tag) << std::endl;
+    }
+    default:
+      std::cout << std::endl;      
+    }
+    std::cout << std::endl;
   }
   
   return 0;
