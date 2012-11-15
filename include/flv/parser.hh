@@ -104,24 +104,21 @@ namespace flv2ts {
       }
 
       bool parseAudioTag(Tag& tag) {
-        _buf.resize(sizeof(AudioTag) + tag.data_size);
-        
-        AudioTag* audio = reinterpret_cast<AudioTag*>(const_cast<char*>(_buf.data())); // XXX:
+        AudioTag& audio = tag.audio;
 
         uint8_t tmp = _in.readUint8();
-        audio->sound_format = (tmp & 0xF0) >> 4;
-        audio->sound_rate   = (tmp & 0x0C) >> 2;
-        audio->sound_size   = (tmp & 0x02) >> 1;
-        audio->sound_type   = (tmp & 0x01);
+        audio.sound_format = (tmp & 0xF0) >> 4;
+        audio.sound_rate   = (tmp & 0x0C) >> 2;
+        audio.sound_size   = (tmp & 0x02) >> 1;
+        audio.sound_type   = (tmp & 0x01);
 
-        if(audio->sound_format == 10) { // AAC
-          audio->aac_packet_type = _in.readUint8();
+        if(audio.sound_format == 10) { // AAC
+          audio.aac_packet_type = _in.readUint8();
         }
         
-        audio->payload = reinterpret_cast<uint8_t*>(audio) + audio->headerSize();
-        _in.read(audio->payload, audio->payloadSize(tag));
-        
-        tag.data = static_cast<TagData*>(audio);
+        audio.payload_size = tag.data_size - audio.headerSize();
+        audio.payload = _in.read(audio.payload_size);
+
         return true;
       }
 
@@ -132,19 +129,16 @@ namespace flv2ts {
       }
 
       bool parseScriptDataTag(Tag& tag) {
-        _buf.resize(tag.data_size);
+        ScriptDataTag& script_data = tag.script_data;
+        script_data.payload_size = tag.data_size;
+        script_data.amf0_payload = _in.read(tag.data_size);
 
-        ScriptDataTag* script_data = reinterpret_cast<ScriptDataTag*>(const_cast<char*>(_buf.data())); // XXX:
-        _in.read(script_data->amf0_payload, tag.data_size);
-
-        tag.data = static_cast<TagData*>(script_data);
         return true;
       }
 
     private:
       aux::FileMappedMemory _fmm;
       aux::ByteStream _in;
-      std::string _buf;
     };
   }
 }

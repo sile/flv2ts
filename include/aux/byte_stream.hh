@@ -42,9 +42,10 @@ namespace flv2ts {
         return v;
       }
 
-      void read(uint8_t* buf, size_t buf_size) {
-        memcpy(buf, _cur, buf_size);
-        _cur += buf_size;
+      const uint8_t* read(size_t size) {
+        const uint8_t* tmp = _cur;
+        _cur += size;
+        return tmp;
       }
 
       bool abs_seek(size_t pos) {

@@ -58,20 +58,19 @@ int main(int argc, char** argv) {
     switch(tag.type) {
     case flv2ts::flv::Tag::TYPE_SCRIPT_DATA: {
       std::cout << "  [script_data]" << std::endl
-                << "    payload_size: " << tag.data_size << std::endl;
+                << "    payload_size: " << tag.script_data.payload_size << std::endl;
       break;
     }
     case flv2ts::flv::Tag::TYPE_AUDIO: {
-      const flv2ts::flv::AudioTag& audio = *reinterpret_cast<flv2ts::flv::AudioTag*>(tag.data);
       std::cout << "  [audio]" << std::endl
-                << "    sound_format: " << (int)audio.sound_format << std::endl
-                << "    sound_rate:   " << (int)audio.sound_rate << std::endl
-                << "    sound_size:   " << (int)audio.sound_size << std::endl
-                << "    sound_type:   " << (int)audio.sound_type << std::endl;
-      if(audio.sound_format == 10) {
-        std::cout << "    acc_packate_type: " << (int)audio.aac_packet_type << std::endl;
+                << "    sound_format: " << (int)tag.audio.sound_format << std::endl
+                << "    sound_rate:   " << (int)tag.audio.sound_rate << std::endl
+                << "    sound_size:   " << (int)tag.audio.sound_size << std::endl
+                << "    sound_type:   " << (int)tag.audio.sound_type << std::endl;
+      if(tag.audio.sound_format == 10) {
+        std::cout << "    acc_packate_type: " << (int)tag.audio.aac_packet_type << std::endl;
       }
-      std::cout << "    payload_size: " << audio.payloadSize(tag) << std::endl;
+      std::cout << "    payload_size: " << tag.audio.payload_size << std::endl;
     }
     default:
       std::cout << std::endl;      
