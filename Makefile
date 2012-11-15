@@ -1,7 +1,7 @@
 OPT=-O2 -Wall -Werror -Iinclude
 
-all: bin/parse-flv
+all: parse-flv
 
-bin/parse-flv: src/bin/parse-flv.cc include/flv/parser.hh
+parse-flv: src/bin/parse-flv.cc
 	mkdir -p bin
 	g++ ${OPT} -o bin/parse-flv src/bin/parse-flv.cc
