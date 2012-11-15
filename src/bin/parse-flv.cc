@@ -1,5 +1,6 @@
-#include <iostream>
 #include <flv/parser.hh>
+#include <iostream>
+#include <inttypes.h>
 
 int main(int argc, char** argv) {
   if(argc != 2) {
@@ -21,8 +22,10 @@ int main(int argc, char** argv) {
   flv2ts::flv::Header header;
   if(! parser.parseHeader(header)) {
     std::cerr << "parse flv header failed" << std::endl;
+    return 1;
   }
 
+  // header
   std::cout << "[header]" << std::endl
             << "  signature:   " << header.signature[0] << header.signature[1] << header.signature[2] << std::endl
             << "  version:     " << (int)header.version << std::endl
@@ -30,6 +33,30 @@ int main(int argc, char** argv) {
             << "  is_video:    " << (header.is_video ? "true" : "false") << std::endl
             << "  data_offset: " << header.data_offset << std::endl
             << std::endl;
+  parser.abs_seek(header.data_offset);
 
+  // body
+  for(int i=0;; i++) {
+    size_t offset = parser.position();
+    flv2ts::flv::Tag tag;
+    uint32_t prev_tag_size;
+    if(! parser.parseTag(tag, prev_tag_size)) {
+      std::cerr << "parse flv tag failed" << std::endl;
+      return 1;
+    }
+    
+    if(parser.eos()) {
+      break;
+    }
+    
+    std::cout << "[tag:" << i << ":" << offset << "]" << std::endl
+              << "  filter:    " << (tag.filter ? "true" : "false") << std::endl
+              << "  type:      " << (int)tag.type << std::endl
+              << "  data_size: " << tag.data_size << std::endl
+              << "  timestamp: " << tag.timestamp << std::endl
+              << "  stream_id: " << tag.stream_id << std::endl
+              << std::endl;
+  }
+  
   return 0;
 }

@@ -21,7 +21,7 @@ namespace flv2ts {
       operator bool() const { return _fmm && _in; }
 
       bool parseHeader(Header& header) {
-        if(_in.eos(9)) {
+        if(! _in.can_read(9)) {
           return false;
         }
         
@@ -34,23 +34,67 @@ namespace flv2ts {
         
         header.version = _in.readUint8();
         
-        const uint8_t flags = _in.readUint8();
+        uint8_t flags = _in.readUint8();
         
         header.is_audio = flags & 0x04;
         header.is_video = flags & 0x01;
         
         header.data_offset = _in.readUint32Be();
-        
+
         return true;
       }
 
-      void parseTag(Tag& tag) {
+      bool parseTag(Tag& tag, uint32_t& prev_tag_size) {
+        if(! _in.can_read(4)) {
+          return false;
+        }
+        prev_tag_size = _in.readUint32Be();
+        if(_in.eos()) {
+          // last tag
+          return true;
+        } else {
+          return parseTagImpl(tag);
+        }
       }
 
-      bool seek(uint64_t pos) {
-        return true;
-      }
+      bool abs_seek(size_t pos) { return _in.abs_seek(pos); }
+      bool rel_seek(ssize_t offset) { return _in.rel_seek(offset); }
+      size_t position() const { return _in.position(); }
+      bool eos() const { return _in.eos(); }
       
+    private:
+      bool parseTagImpl(Tag& tag) {
+        if(! _in.can_read(11)) {
+          return false;
+        }
+        
+        uint8_t tmp = _in.readUint8();
+        
+        tag.filter = tmp & 0x20;
+        if(tag.filter) {
+          // encrypted file is unsupported
+          return false;
+        }
+
+        tag.type = tmp & 0x1F;
+        
+        tag.data_size = _in.readUint24Be();
+        
+        uint32_t timestamp    = _in.readUint24Be();
+        uint8_t timestamp_ext = _in.readUint8();
+        tag.timestamp = static_cast<int32_t>((timestamp_ext << 24) + timestamp);
+        
+        tag.stream_id = _in.readUint24Be();
+        
+        if(! _in.can_read(tag.data_size)) {
+          return false;
+        }
+        
+        _in.rel_seek(tag.data_size);
+                     
+        return true;
+      }
+
     private:
       aux::FileMappedMemory _fmm;
       aux::ByteStream _in;

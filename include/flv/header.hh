@@ -8,8 +8,8 @@ namespace flv2ts {
     struct Header {
       char     signature[3];
       uint8_t  version;
-      uint8_t  is_audio;
-      uint8_t  is_video;
+      bool     is_audio;
+      bool     is_video;
       uint32_t data_offset;
     };
   }
