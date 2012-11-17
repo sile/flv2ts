@@ -1,6 +1,7 @@
 #ifndef FLV2TS_FLV_AUDIO_TAG_HH
 #define FLV2TS_FLV_AUDIO_TAG_HH
 
+#include <inttypes.h>
 #include <cstddef>
 
 namespace flv2ts {

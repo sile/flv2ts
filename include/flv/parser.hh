@@ -123,7 +123,19 @@ namespace flv2ts {
       }
 
       bool parseVideoTag(Tag& tag) {
-        _in.rel_seek(tag.data_size);
+        VideoTag& video = tag.video;
+        
+        uint8_t tmp = _in.readUint8();
+        video.frame_type = (tmp & 0xF0) >> 4;
+        video.codec_id   = (tmp & 0x0F);
+        
+        if(video.codec_id == 7) { // AVC
+          video.avc_packet_type = _in.readUint8();
+          video.composition_time = _in.readInt24Be();
+        }
+
+        video.payload_size = tag.data_size - video.headerSize();
+        video.payload = _in.read(video.payload_size);
         
         return true;
       }

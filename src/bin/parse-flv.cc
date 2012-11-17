@@ -71,9 +71,22 @@ int main(int argc, char** argv) {
         std::cout << "    acc_packate_type: " << (int)tag.audio.aac_packet_type << std::endl;
       }
       std::cout << "    payload_size: " << tag.audio.payload_size << std::endl;
+      break;
+    }
+    case flv2ts::flv::Tag::TYPE_VIDEO: {
+      std::cout << "  [video]" << std::endl
+                << "    frame_type:   " << (int)tag.video.frame_type << std::endl
+                << "    codec_id:     " << (int)tag.video.codec_id << std::endl;
+      if(tag.video.codec_id == 7) {
+        std::cout << "    avc_packate_type: " << (int)tag.video.avc_packet_type << std::endl
+                  << "    composition_time: " << (int)tag.video.composition_time << std::endl;
+      }
+      std::cout << "    payload_size: " << tag.video.payload_size << std::endl;
+      break;
     }
     default:
-      std::cout << std::endl;      
+      std::cerr << "unknown tag type: " << (int)tag.type << std::endl;
+      return 1;
     }
     std::cout << std::endl;
   }
