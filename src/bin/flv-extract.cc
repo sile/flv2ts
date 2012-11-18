@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
     switch(tag.type) {
     case flv::Tag::TYPE_AUDIO:
       if(audio) {
-        if(tag.audio.sound_format != 10) {
+        if(tag.audio.sound_format != 10) { // 10=AAC
           std::cerr << "unsupported audio format: " << tag.audio.sound_format << std::endl;
           return 1;
         }
@@ -162,6 +162,15 @@ int main(int argc, char** argv) {
       break;
     case flv::Tag::TYPE_VIDEO:
       if(! audio) {
+        if(tag.video.codec_id != 7) { // 7=AVC
+          std::cerr << "unsupported video codec: " << tag.video.codec_id << std::endl;
+          return 1;
+        }
+        if(tag.video.avc_packet_type != 1) {
+          // not AVC NALU
+          continue;
+        }
+
         std::cout.write(reinterpret_cast<const char*>(tag.video.payload), tag.video.payload_size);        
       }
       break;

@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                 << "    frame_type:   " << (int)tag.video.frame_type << std::endl
                 << "    codec_id:     " << (int)tag.video.codec_id << std::endl;
       if(tag.video.codec_id == 7) {
-        std::cout << "    avc_packate_type: " << (int)tag.video.avc_packet_type << std::endl
+        std::cout << "    avc_packet_type: " << (int)tag.video.avc_packet_type << std::endl
                   << "    composition_time: " << (int)tag.video.composition_time << std::endl;
       }
       std::cout << "    payload_size: " << tag.video.payload_size << std::endl;
