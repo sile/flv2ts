@@ -31,7 +31,7 @@ namespace flv2ts {
       uint16_t program_num;
       uint8_t reserved2:2;           
       uint8_t version_number:5;
-      bool current_next_indicator;
+      uint8_t current_next_indicator:1;
       uint8_t section_number;        // always set to 0
       uint8_t last_section_number;   // always set to 0
       uint8_t reserved3:3;

@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
                 << "    section_length:           " << pat.section_length << std::endl
                 << "    transport_stream_id:      " << pat.transport_stream_id << std::endl
                 << "    version_number:           " << (int)pat.version_number << std::endl
-                << "    current/next_indicator:   " << bool2str(pat.current_next_indicator) << std::endl
+                << "    current/next_indicator:   " << (int)pat.current_next_indicator << std::endl
                 << "    section_number:           " << (int)pat.section_number << std::endl
                 << "    last_section_number:      " << (int)pat.last_section_number << std::endl;
       std::cout << "    [PMT_MAP]" << std::endl;
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
                 << "    section_length:           " << pmt.section_length << std::endl
                 << "    program_num:              " << pmt.program_num << std::endl
                 << "    version_number:           " << (int)pmt.version_number << std::endl
-                << "    current/next_indicator:   " << bool2str(pmt.current_next_indicator) << std::endl
+                << "    current/next_indicator:   " << (int)pmt.current_next_indicator << std::endl
                 << "    section_number:           " << (int)pmt.section_number << std::endl
                 << "    last_section_number:      " << (int)pmt.last_section_number << std::endl
                 << "    pcr_pid:                  " << (int)pmt.pcr_pid << std::endl
