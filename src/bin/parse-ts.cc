@@ -4,7 +4,6 @@
 
 using namespace flv2ts;
 
-
 const char* bool2str(bool b) {
   return b ? "true" : "false";
 }

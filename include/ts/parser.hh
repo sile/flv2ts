@@ -86,6 +86,36 @@ namespace flv2ts {
         }
       }
 
+      bool is_audio_packet(const Packet& packet) const {
+        Packet::PAYLOAD_TYPE type = get_payload_type(packet);
+        if(type != Packet::PAYLOAD_TYPE_PES && type != Packet::PAYLOAD_TYPE_DATA) {
+          return false;
+        }
+
+        for(size_t i=0; i < stream_info_list.size(); i++) {
+          if(packet.header.pid == stream_info_list[i].elementary_pid) {
+            return stream_info_list[i].stream_type == 15;
+          }
+        }
+        
+        return false;
+      }
+
+      bool is_video_packet(const Packet& packet) const {
+        Packet::PAYLOAD_TYPE type = get_payload_type(packet);
+        if(type != Packet::PAYLOAD_TYPE_PES && type != Packet::PAYLOAD_TYPE_DATA) {
+          return false;
+        }
+        
+        for(size_t i=0; i < stream_info_list.size(); i++) {
+          if(packet.header.pid == stream_info_list[i].elementary_pid) {
+            return stream_info_list[i].stream_type == 27;
+          }
+        }
+        
+        return false;
+      }
+
     private:
       bool parseHeader(Header& header) {
         const uint16_t tmp1 = _in.readUint16Be();
@@ -358,13 +388,7 @@ namespace flv2ts {
         _in.abs_seek(header_end);
 
         // data
-        if(pes.pes_packet_length == 0) {  
-          pes.data_size = (start_pos + Packet::SIZE) - _in.position();
-        } else {
-          // XXX: 多分間違ってる
-          unsigned size = std::min(pes.pes_packet_length, static_cast<uint16_t>(Packet::SIZE));
-          pes.data_size = (start_pos + size) - _in.position();
-        }
+        pes.data_size = (start_pos + Packet::SIZE) - _in.position();
         pes.data = _in.read(pes.data_size);
         
         return true;
