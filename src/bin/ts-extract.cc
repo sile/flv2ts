@@ -1,16 +1,25 @@
 #include <iostream>
+#include <string.h>
 #include <ts/parser.hh>
 #include <ts/packet.hh>
 
 using namespace flv2ts;
 
 int main(int argc, char** argv) {
-  if(argc != 2) {
-    std::cerr << "Usage: ts-extract-audio TS_FILE" << std::endl;
+  if(argc != 3) {
+    std::cerr << "Usage: ts-extract audio|video TS_FILE" << std::endl;
     return 1;
   }
 
-  const char* filepath = argv[1];
+  const char* type = argv[1];
+  if(strcmp(type, "audio") != 0 &&
+     strcmp(type, "video") != 0) {
+    std::cerr << "Undefined type: " << type << std::endl;
+    return 1;
+  }
+  const bool audio = strcmp(type, "audio") == 0;
+
+  const char* filepath = argv[2];
   ts::Parser parser(filepath);
   if(! parser) {
     std::cerr << "Can't open file: " << filepath << std::endl;
@@ -24,7 +33,8 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    if(! parser.is_audio_packet(packet)) {
+    if((audio   && ! parser.is_audio_packet(packet)) ||
+       (! audio && ! parser.is_video_packet(packet))) {
       continue;
     }
 
