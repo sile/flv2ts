@@ -1,7 +1,7 @@
 OPT=-g -Wall -Werror -Iinclude
 
-# ALL=parse-flv flv2ts parse-ts ts-extract
-ALL=ts-extract
+#ALL=parse-flv flv2ts parse-ts ts-extract flv-extract
+ALL=flv-extract
 
 all: ${ALL}
 
@@ -18,5 +18,9 @@ flv2ts: src/bin/flv2ts.cc
 	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
 
 ts-extract: src/bin/ts-extract.cc
+	mkdir -p bin
+	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
+
+flv-extract: src/bin/flv-extract.cc
 	mkdir -p bin
 	g++ ${OPT} -o bin/${@} src/bin/${@}.cc

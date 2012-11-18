@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
                 << "    sound_size:   " << (int)tag.audio.sound_size << std::endl
                 << "    sound_type:   " << (int)tag.audio.sound_type << std::endl;
       if(tag.audio.sound_format == 10) {
-        std::cout << "    acc_packate_type: " << (int)tag.audio.aac_packet_type << std::endl;
+        std::cout << "    aac_packet_type: " << (int)tag.audio.aac_packet_type << std::endl;
       }
       std::cout << "    payload_size: " << tag.audio.payload_size << std::endl;
       break;
