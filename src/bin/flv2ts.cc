@@ -18,6 +18,9 @@ const static unsigned VIDEO_STREAM_ID = 224;
 const static unsigned PMT_TABLE_ID = 2;
 const static double PTS_DTS_OFFSET = 0.1;
 
+static unsigned g_counter = 0; // XXX:
+static uint64_t g_prev_pcr = 0;
+
 void write_ts_pat(std::ostream& out) {
   char buf[256];
   ssize_t size;
@@ -126,9 +129,11 @@ void write_ts_pmt(std::ostream& out) {
     pmt.stream_info_list.push_back(info);
 
     // audio
+    /*
     info.stream_type    = STREAM_TYPE_AUDIO;
     info.elementary_pid = ES_AUDIO_PID;
     pmt.stream_info_list.push_back(info);
+    */
   }
 
   pmt.section_length = 13 + pmt.program_info_length + pmt.stream_info_list.size() * 5;
@@ -163,7 +168,7 @@ uint64_t sec_to_90kHz(double sec) {
   return static_cast<uint64_t>(sec * 90000.0);
 }
 
-void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pcr, size_t& data_offset) {
+void write_video_first(const flv::Tag& tag, std::ostream& out, size_t& data_offset) {
   const flv::VideoTag& video = tag.video;
 
   char buf[256];
@@ -182,7 +187,7 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pc
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 3; // payload and adaptation_field
-  h.continuity_counter = 0;
+  h.continuity_counter = (g_counter++) % 16; // XXX:
   
   size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
@@ -200,7 +205,7 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pc
 
   uint64_t pcr = sec_to_90kHz(static_cast<double>(tag.timestamp) / 1000.0);
   af.pcr = (pcr << 15) + (0x3F << 9);
-  prev_pcr = pcr;
+  g_prev_pcr = pcr;
 
   af.adaptation_field_length = 7;
   
@@ -247,7 +252,7 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pc
   data_offset += pes.data_size;
 }
 
-void write_video_rest(const flv::Tag& tag, std::ostream& out, size_t& data_offset, size_t counter) {
+void write_video_rest(const flv::Tag& tag, std::ostream& out, size_t& data_offset) {
   const flv::VideoTag& video = tag.video;
 
   char buf[256];
@@ -266,7 +271,7 @@ void write_video_rest(const flv::Tag& tag, std::ostream& out, size_t& data_offse
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 1; // payload only
-  h.continuity_counter = counter % 16;
+  h.continuity_counter = (g_counter++) % 16;
   
   if(video.payload_size - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
     h.adaptation_field_exist |= 2;
@@ -308,11 +313,10 @@ void write_video_rest(const flv::Tag& tag, std::ostream& out, size_t& data_offse
 
 void write_video(const flv::Tag& tag, std::ostream& out) {
   const flv::VideoTag& video = tag.video;
-  uint64_t prev_pcr;
   size_t data_offset=0;
-  write_video_first(tag, out, prev_pcr, data_offset);
-  for(size_t counter=1; data_offset < video.payload_size; counter++) {
-    write_video_rest(tag, out, data_offset, counter);
+  write_video_first(tag, out, data_offset);
+  for(; data_offset < video.payload_size;) {
+    write_video_rest(tag, out, data_offset);
   }
 }
 
@@ -352,7 +356,7 @@ int main(int argc, char** argv) {
   std::ofstream ts_out;
 
   // flv body
-  for(;;) {
+  for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
     if(! flv.parseTag(tag, prev_tag_size)) {
@@ -408,12 +412,14 @@ int main(int argc, char** argv) {
         std::cerr << "unsupported video codec: " << tag.video.codec_id << std::endl;
         return 1;
       }
+
       if(tag.video.avc_packet_type != 1) {
         // not AVC NALU
         continue;
       }
-      
+
       write_video(tag, ts_out);
+      //if(kk >= 400) return 0;
       return 0;
       //break;
     }
