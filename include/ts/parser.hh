@@ -397,7 +397,7 @@ namespace flv2ts {
         return true;
       }
       
-      uint32_t readPtsDts(uint8_t expect_check_bits) {
+      uint64_t readPtsDts(uint8_t expect_check_bits) {
         uint8_t b1 = _in.readUint8();
         uint8_t b2 = _in.readUint16Be();
         uint8_t b3 = _in.readUint16Be();

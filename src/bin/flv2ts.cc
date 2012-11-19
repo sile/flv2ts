@@ -14,7 +14,9 @@ const static unsigned ES_VIDEO_PID = 0x100;
 const static unsigned ES_AUDIO_PID = 0x101;
 const static unsigned STREAM_TYPE_VIDEO = 27;
 const static unsigned STREAM_TYPE_AUDIO = 15;
+const static unsigned VIDEO_STREAM_ID = 224;
 const static unsigned PMT_TABLE_ID = 2;
+const static double PTS_DTS_OFFSET = 0.1;
 
 void write_ts_pat(std::ostream& out) {
   char buf[256];
@@ -154,6 +156,101 @@ void write_ts_start(std::ostream& out) {
   write_ts_pmt(out);
 }
 
+uint64_t sec_to_27MHz(double sec) { // for PCR extention
+  return static_cast<uint64_t>(sec * 27000000.0);
+}
+uint64_t sec_to_90kHz(double sec) {
+  return static_cast<uint64_t>(sec * 90000.0);
+}
+
+void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pcr, size_t& data_offset) {
+  const flv::VideoTag& video = tag.video;
+
+  char buf[256];
+  ssize_t size;
+  size_t wrote_size = 0;
+
+  // sync-byte
+  buf[0] = static_cast<char>(ts::Packet::SYNC_BYTE);
+  wrote_size += 1;
+
+  // header
+  ts::Header h;
+  h.transport_error_indicator = false;
+  h.payload_unit_start_indicator = true;
+  h.transport_priority = 0;
+  h.pid = ES_VIDEO_PID;
+  h.scrambling_control = 0;
+  h.adaptation_field_exist = 3; // payload and adaptation_field
+  h.continuity_counter = 0;
+  
+  size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+  wrote_size += size;
+  
+  // adaptation_field
+  ts::AdaptationField af;
+  af.discontinuity_indicator = false;
+  af.random_access_indicator = (video.frame_type == flv::VideoTag::FRAME_TYPE_KEY);
+  af.es_priority_indicator =  false;
+  af.pcr_flag = true;
+  af.opcr_flag = false;
+  af.splicing_point_flag = false;
+  af.transport_private_data_flag = false;
+  af.adaptation_field_extension_flag = false;
+
+  uint64_t pcr = sec_to_90kHz(static_cast<double>(tag.timestamp) / 1000.0);
+  af.pcr = (pcr << 15) + (0x3F << 9);
+  prev_pcr = pcr;
+
+  af.adaptation_field_length = 7;
+  
+  size = af.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+  wrote_size += size;
+  
+  // pes
+  ts::PES pes;
+  pes.packet_start_prefix_code = 1;
+  pes.stream_id = VIDEO_STREAM_ID;
+
+  const unsigned optional_header_size = 13;
+  pes.pes_packet_length = optional_header_size + video.payload_size;
+
+  ts::OptionalPESHeader& oph = pes.optional_header;
+  oph.marker_bits = 2;
+  oph.scrambling_control = 0;
+  oph.priority = 0;
+  oph.data_alignment_indicator = false;
+  oph.copyright = false;
+  oph.original_or_copy = false;
+  oph.pts_indicator = true;
+  oph.dts_indicator = true;
+  oph.escr_flag = false;
+  oph.es_rate_flag = false;
+  oph.dsm_trick_mode_flag = false;
+  oph.additional_copy_info_flag = false;
+  oph.crc_flag = false;
+  oph.extension_flag = false;
+  oph.pes_header_length = 10;
+  oph.dts = sec_to_90kHz(static_cast<double>(tag.timestamp) / 1000.0 + PTS_DTS_OFFSET);
+  oph.pts = oph.dts + sec_to_90kHz(static_cast<double>(video.composition_time) / 1000.0);
+
+  size = pes.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+  wrote_size += size;
+  out.write(reinterpret_cast<const char*>(buf), wrote_size);
+
+  pes.data_size = ts::Packet::SIZE - wrote_size;
+  pes.data = video.payload;
+  out.write(reinterpret_cast<const char*>(pes.data), pes.data_size);
+
+  data_offset += pes.data_size;
+}
+
+void write_video(const flv::Tag& tag, std::ostream& out) {
+  uint64_t prev_pcr;
+  size_t data_offset=0;
+  write_video_first(tag, out, prev_pcr, data_offset);
+}
+
 int main(int argc, char** argv) {
   if(argc != 4) {
     std::cerr << "Usage: flv2ts INPUT_FLV_FILE OUTPUT_DIR DURATION" << std::endl;
@@ -251,8 +348,9 @@ int main(int argc, char** argv) {
         continue;
       }
       
-      //std::cout.write(reinterpret_cast<const char*>(tag.video.payload), tag.video.payload_size);        
-      break;
+      write_video(tag, ts_out);
+      return 0;
+      //break;
     }
 
     default:

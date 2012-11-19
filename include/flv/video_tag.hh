@@ -21,6 +21,14 @@ namespace flv2ts {
           return 1;
         }
       }
+
+      enum FRAME_TYE {
+        FRAME_TYPE_KEY = 1,
+        FRAME_TYPE_INTER = 2,
+        FRAME_TYPE_DISPOSABLE_INTER = 3, // H.263 only
+        FRAME_TYPE_GENERATED_KEY = 4, // reserved for server use only
+        FRAME_TYPE_VIDEO_INFO_COMMAND = 5
+      };
     };
   }
 }
