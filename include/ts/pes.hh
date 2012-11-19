@@ -77,8 +77,8 @@ namespace flv2ts {
         assert(h.data_alignment_indicator == false);
         assert(h.escr_flag == false);
         assert(h.es_rate_flag == false);
-        assert(h.dsm_trick_mode == false);
-        assert(h.additional_copy_info == false);
+        assert(h.dsm_trick_mode_flag == false);
+        assert(h.additional_copy_info_flag == false);
         assert(h.crc_flag == false);
         assert(h.extension_flag == false);
         

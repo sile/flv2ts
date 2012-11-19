@@ -238,6 +238,8 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pc
   wrote_size += size;
   out.write(reinterpret_cast<const char*>(buf), wrote_size);
 
+  // TODO: video.paylaod_size < (ts::Packet::SIZE - wrote_size) の場合の処理
+
   pes.data_size = ts::Packet::SIZE - wrote_size;
   pes.data = video.payload;
   out.write(reinterpret_cast<const char*>(pes.data), pes.data_size);
@@ -245,10 +247,73 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, uint64_t& prev_pc
   data_offset += pes.data_size;
 }
 
+void write_video_rest(const flv::Tag& tag, std::ostream& out, size_t& data_offset, size_t counter) {
+  const flv::VideoTag& video = tag.video;
+
+  char buf[256];
+  ssize_t size;
+  size_t wrote_size = 0;
+
+  // sync-byte
+  buf[0] = static_cast<char>(ts::Packet::SYNC_BYTE);
+  wrote_size += 1;
+
+  // header
+  ts::Header h;
+  h.transport_error_indicator = false;
+  h.payload_unit_start_indicator = false;
+  h.transport_priority = 0;
+  h.pid = ES_VIDEO_PID;
+  h.scrambling_control = 0;
+  h.adaptation_field_exist = 1; // payload only
+  h.continuity_counter = counter % 16;
+  
+  if(video.payload_size - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
+    h.adaptation_field_exist |= 2;
+  }
+
+  size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+  wrote_size += size;
+
+  size_t rest_size = ts::Packet::SIZE - wrote_size;
+  if(video.payload_size - data_offset < rest_size) {
+    // adaptation_field
+    ts::AdaptationField af;
+    af.discontinuity_indicator = false;
+    af.random_access_indicator = (video.frame_type == flv::VideoTag::FRAME_TYPE_KEY);
+    af.es_priority_indicator =  false;
+    af.pcr_flag = false;
+    af.opcr_flag = false;
+    af.splicing_point_flag = false;
+    af.transport_private_data_flag = false;
+    af.adaptation_field_extension_flag = false;
+    
+    af.adaptation_field_length = 1;
+    
+    if(video.payload_size - data_offset < rest_size - 2) { // 2 = adaptation-fieldの最小サイズ
+      size_t delta = rest_size - (video.payload_size - data_offset) - 2;
+      af.adaptation_field_length += delta;
+    }
+
+    size = af.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+    wrote_size += size;
+    rest_size  -= size;
+  }
+  out.write(reinterpret_cast<const char*>(buf), wrote_size);
+  
+  // pes: data
+  out.write(reinterpret_cast<const char*>(video.payload + data_offset), rest_size);
+  data_offset += rest_size;
+}
+
 void write_video(const flv::Tag& tag, std::ostream& out) {
+  const flv::VideoTag& video = tag.video;
   uint64_t prev_pcr;
   size_t data_offset=0;
   write_video_first(tag, out, prev_pcr, data_offset);
+  for(size_t counter=1; data_offset < video.payload_size; counter++) {
+    write_video_rest(tag, out, data_offset, counter);
+  }
 }
 
 int main(int argc, char** argv) {
