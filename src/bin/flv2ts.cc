@@ -9,6 +9,13 @@
 
 using namespace flv2ts;
 
+const static unsigned PMT_PID = 0x1000;
+const static unsigned ES_VIDEO_PID = 0x100;
+const static unsigned ES_AUDIO_PID = 0x101;
+const static unsigned STREAM_TYPE_VIDEO = 27;
+const static unsigned STREAM_TYPE_AUDIO = 15;
+const static unsigned PMT_TABLE_ID = 2;
+
 void write_ts_pat(std::ostream& out) {
   char buf[256];
   ssize_t size;
@@ -46,7 +53,7 @@ void write_ts_pat(std::ostream& out) {
     ts::PMT_MAP_ENTRY entry;
     entry.program_num = 1;
     entry.reserved = 7;
-    entry.program_pid = 0x1000;
+    entry.program_pid = PMT_PID;
 
     pat.pmt_map.push_back(entry);
   }
@@ -69,6 +76,77 @@ void write_ts_pat(std::ostream& out) {
 }
 
 void write_ts_pmt(std::ostream& out) {
+  char buf[256];
+  ssize_t size;
+  size_t wrote_size = 0;
+
+  buf[0] = static_cast<char>(ts::Packet::SYNC_BYTE);
+  wrote_size += 1;
+
+  ts::Header h;
+  h.transport_error_indicator = false;
+  h.payload_unit_start_indicator = true;
+  h.transport_priority = 0;
+  h.pid = PMT_PID;
+  h.scrambling_control = 0;
+  h.adaptation_field_exist = 1; // payload unit only
+  h.continuity_counter = 0;
+  
+  size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
+  wrote_size += size;
+  
+  ts::PMT pmt;
+  pmt.pointer_field = 0;
+  pmt.table_id = PMT_TABLE_ID;
+  pmt.section_syntax_indicator = true;
+  pmt.zero = 0;
+  pmt.reserved1 = 3;
+  pmt.program_num = 1;
+  pmt.version_number = 0;
+  pmt.reserved2 = 3;
+  pmt.current_next_indicator = 1;
+  pmt.section_number = 0;
+  pmt.last_section_number = 0;
+  
+  pmt.reserved3 = 7;
+  pmt.pcr_pid = ES_VIDEO_PID; // PID of general timecode stream, or 0x1FFF
+  pmt.reserved4 = 15;
+  pmt.program_info_length = 0;
+
+  {
+    // video
+    ts::STREAM_INFO info;
+    info.stream_type    = STREAM_TYPE_VIDEO;
+    info.reserved1      = 7;
+    info.elementary_pid = ES_VIDEO_PID;
+    info.reserved2      = 15;
+    info.es_info_length = 0;
+    pmt.stream_info_list.push_back(info);
+
+    // audio
+    info.stream_type    = STREAM_TYPE_AUDIO;
+    info.elementary_pid = ES_AUDIO_PID;
+    pmt.stream_info_list.push_back(info);
+  }
+
+  pmt.section_length = 13 + pmt.program_info_length + pmt.stream_info_list.size() * 5;
+  for(size_t i=0; i < pmt.stream_info_list.size(); i++) {
+    pmt.section_length += pmt.stream_info_list[i].es_info_length;
+  }
+  
+  {
+    size = pmt.dump(buf+wrote_size, sizeof(buf)-wrote_size);
+    pmt.crc32 = aux::chksum_crc32(buf + 5, wrote_size + size - 4 - 5);
+  }
+    
+  size = pmt.dump(buf+wrote_size, sizeof(buf)-wrote_size);
+  wrote_size += size;
+
+  for(; wrote_size < ts::Packet::SIZE; wrote_size++) {
+    buf[wrote_size] = (char)0xFF;
+  }
+
+  out.write(buf, wrote_size);
 }
 
 void write_ts_start(std::ostream& out) {
@@ -79,6 +157,7 @@ void write_ts_start(std::ostream& out) {
 int main(int argc, char** argv) {
   if(argc != 4) {
     std::cerr << "Usage: flv2ts INPUT_FLV_FILE OUTPUT_DIR DURATION" << std::endl;
+    return 1;
   }
 
   const char* flv_file = argv[1];
@@ -88,6 +167,7 @@ int main(int argc, char** argv) {
   flv2ts::flv::Parser flv(flv_file);
   if(! flv) {
     std::cerr << "Can't open file: " << flv_file << std::endl;
+    return 1;
   }
   
   std::cout << "[input]" << std::endl

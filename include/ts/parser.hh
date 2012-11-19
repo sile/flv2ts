@@ -261,6 +261,9 @@ namespace flv2ts {
         }
         
         pmt.table_id = _in.readUint8();
+        if(pmt.table_id != 2) {
+          return false;
+        }
 
         const uint16_t tmp1 = _in.readUint16Be();
         pmt.section_syntax_indicator = (tmp1 & 0x8000);
