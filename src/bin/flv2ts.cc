@@ -415,6 +415,9 @@ int main(int argc, char** argv) {
 
       if(tag.video.avc_packet_type != 1) {
         // not AVC NALU
+
+        // TODO: configurationの解釈
+        // TODO: bitstream format への変換
         continue;
       }
 
