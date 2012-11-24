@@ -9,8 +9,26 @@
 #include <string.h>
 #include <flv/parser.hh>
 #include <adts/header.hh>
+#include <h264/avc_decoder_configuration_record.hh>
 
 using namespace flv2ts;
+
+void output_avc_decoder_configuration_record(int i, const h264::AVCDecoderConfigurationRecord& rec) {
+  std::cerr << "[" << i << ":AVCDecoderConfigurationRecord]" << std::endl 
+            << "  configuration_version:  " << (int)rec.configuration_version << std::endl
+            << "  avc_profile_indication: " << (int)rec.avc_profile_indication << std::endl
+            << "  profile_compatibility:  " << (int)rec.profile_compatibility << std::endl
+            << "  avc_level_indication:   " << (int)rec.avc_level_indication << std::endl
+            << "  length_size_minus_one:  " << (int)rec.length_size_minus_one << std::endl
+            << "  num_of_sequence_parameter_sets:    " << (int)rec.num_of_sequence_parameter_sets << std::endl
+            << "  num_of_picture_parameter_sets:     " << (int)rec.num_of_picture_parameter_sets << std::endl;
+  if(rec.is_high_profile()) {
+    std::cerr << "  chroma_format:           " << (int)rec.chroma_format << std::endl
+              << "  bit_depth_luma_minus8:   " << (int)rec.bit_depth_luma_minus8 << std::endl
+              << "  bit_depth_chroma_minus8: " << (int)rec.bit_depth_chroma_minus8 << std::endl
+              << "  num_of_sequence_parameter_set_ext: " << (int)rec.num_of_sequence_parameter_set_ext << std::endl;
+  }
+}
 
 int main(int argc, char** argv) {
   if(argc != 3) {
@@ -42,7 +60,7 @@ int main(int argc, char** argv) {
   parser.abs_seek(header.data_offset);
 
   // flv body
-  for(;;) {
+  for(int i=0;;i++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
     if(! parser.parseTag(tag, prev_tag_size)) {
@@ -79,12 +97,34 @@ int main(int argc, char** argv) {
           std::cerr << "unsupported video codec: " << tag.video.codec_id << std::endl;
           return 1;
         }
-        if(tag.video.avc_packet_type != 1) {
-          // not AVC NALU
-          continue;
-        }
 
-        std::cout.write(reinterpret_cast<const char*>(tag.video.payload), tag.video.payload_size);        
+        switch(tag.video.avc_packet_type) {
+        case 0: {
+          // AVC sequence header
+          h264::AVCDecoderConfigurationRecord conf;
+          aux::ByteStream conf_in(tag.video.payload, tag.video.payload_size);
+          if(! conf.parse(conf_in)) {
+            std::cerr << "parse AVCDecoderConfigurationRecord failed" << std::endl;
+            return 1;
+          }
+          output_avc_decoder_configuration_record(i, conf);
+          break;
+        }
+        case 1: {
+          // AVC NALU
+          std::cout.write(reinterpret_cast<const char*>(tag.video.payload), tag.video.payload_size);  
+          break;
+        }
+        case 2: {
+          // AVC end of sequence
+          std::cerr << "[" << i << ":AVCEndOfSequence]" << std::endl;
+          break;
+        }
+        default: {
+          std::cerr << "unknown avc_packet_type: " << tag.video.avc_packet_type << std::endl;
+          return 1;
+        }
+        }
       }
       break;
     default:
