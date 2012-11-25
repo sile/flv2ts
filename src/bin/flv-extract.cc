@@ -10,6 +10,7 @@
 #include <flv/parser.hh>
 #include <adts/header.hh>
 #include <h264/avc_decoder_configuration_record.hh>
+#include <h264/avc_sample.hh>
 
 using namespace flv2ts;
 
@@ -60,6 +61,7 @@ int main(int argc, char** argv) {
   parser.abs_seek(header.data_offset);
 
   // flv body
+  h264::AVCDecoderConfigurationRecord conf;
   for(int i=0;;i++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
@@ -101,7 +103,6 @@ int main(int argc, char** argv) {
         switch(tag.video.avc_packet_type) {
         case 0: {
           // AVC sequence header
-          h264::AVCDecoderConfigurationRecord conf;
           aux::ByteStream conf_in(tag.video.payload, tag.video.payload_size);
           if(! conf.parse(conf_in)) {
             std::cerr << "parse AVCDecoderConfigurationRecord failed" << std::endl;
@@ -112,6 +113,19 @@ int main(int argc, char** argv) {
         }
         case 1: {
           // AVC NALU
+          /*
+          aux::ByteStream avc_in(tag.video.payload, tag.video.payload_size);
+          for(int j=0; ! avc_in.eos(); j++) {
+            h264::AVCSample sample;
+            if(! sample.parse(avc_in, conf)) {
+              std::cerr << "parse AVCSample failed" << std::endl;
+            }
+            std::cerr << "[" << i << ":" << j << ":" << "AVCSample]" << std::endl
+                      << "  " << (int)conf.length_size_minus_one << std::endl
+                      << "  nal_unit_length:   " << sample.nal_unit_length << std::endl
+                      << "  rest_payload_size: " << tag.video.payload_size-avc_in.position() << std::endl;
+          }
+          */
           std::cout.write(reinterpret_cast<const char*>(tag.video.payload), tag.video.payload_size);  
           break;
         }
