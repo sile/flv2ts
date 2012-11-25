@@ -529,12 +529,12 @@ bool to_storage_format(const h264::AVCDecoderConfigurationRecord& conf,
 
 int main(int argc, char** argv) {
   if(argc != 4) {
-    std::cerr << "Usage: flv2ts INPUT_FLV_FILE OUTPUT_DIR DURATION" << std::endl;
+    std::cerr << "Usage: flv2ts INPUT_FLV_FILE OUTPUT_TS_PREFIX DURATION" << std::endl;
     return 1;
   }
 
   const char* flv_file = argv[1];
-  const char* output_dir = argv[2];
+  const char* output_ts_prefix = argv[2];
   const unsigned duration = atoi(argv[3]);
 
   flv2ts::flv::Parser flv(flv_file);
@@ -545,7 +545,7 @@ int main(int argc, char** argv) {
   
   std::cout << "[input]" << std::endl
             << "  flv:      " << flv_file << std::endl
-            << "  output:   " << output_dir << std::endl
+            << "  output:   " << output_ts_prefix << std::endl
             << "  duration: " << duration << std::endl
             << std::endl;
 
@@ -565,6 +565,7 @@ int main(int argc, char** argv) {
   // flv body
   uint64_t next_timestamp = 0;
   h264::AVCDecoderConfigurationRecord conf;
+  bool conf_read = false;
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
@@ -591,7 +592,7 @@ int main(int argc, char** argv) {
       ts_out.close();
 
       char buf[1024];
-      sprintf(buf, "%s/a-%d.ts", output_dir, ts_seq);
+      sprintf(buf, "%s%d.ts", output_ts_prefix, ts_seq);
       ts_out.open(buf, std::ios::out | std::ios::binary);
       if(! ts_out) {
         std::cerr << "Can't open output file: " << buf << std::endl;
@@ -603,6 +604,13 @@ int main(int argc, char** argv) {
       ts_seq++;
       next_timestamp = tag.timestamp + duration * 1000;
       write_ts_start(ts_out);
+
+      // TODO: 既に SPS/PPS があるかのチェック
+      if(conf_read) {
+        std::string buf2;
+        to_storage_format_sps_pps(conf, buf2); 
+        write_video(tag, buf2, ts_out);
+      }
     }
 
     switch(tag.type) {
@@ -622,7 +630,7 @@ int main(int argc, char** argv) {
       adts.dump(buf, 7);
       
       std::string buf2;
-      // buf2.assign(buf, 7); // ADTSヘッダは不要
+      buf2.assign(buf, 7); // TODO: 既にADTSヘッダが付いているかのチェック
       buf2.append(reinterpret_cast<const char*>(tag.audio.payload), tag.audio.payload_size);
       
       write_audio(tag, buf2, ts_out);
@@ -645,10 +653,11 @@ int main(int argc, char** argv) {
           return 1;
         }
 
-        // XXX: これがあるとうまくいかない => なくても問題ない？
-        // std::string buf;
-        // to_storage_format_sps_pps(conf, buf); 
-        // write_video(tag, buf, ts_out);
+        conf_read = true;
+        // TODO: 既に SPS/PPS があるかのチェック
+        std::string buf;
+        to_storage_format_sps_pps(conf, buf); 
+        write_video(tag, buf, ts_out);
         
         break;
       }

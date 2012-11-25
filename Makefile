@@ -1,8 +1,7 @@
 OPT=-g -Wall -Werror -Iinclude
 
-#ALL=parse-flv flv2ts parse-ts ts-extract flv-extract
-ALL=flv2ts
-#ALL=flv-extract
+ALL=parse-flv flv2ts parse-ts ts-extract flv-extract build-hls-index
+#ALL=build-hls-index
 
 all: ${ALL}
 
@@ -23,5 +22,9 @@ ts-extract: src/bin/ts-extract.cc
 	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
 
 flv-extract: src/bin/flv-extract.cc
+	mkdir -p bin
+	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
+
+build-hls-index: src/bin/build-hls-index.cc
 	mkdir -p bin
 	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
