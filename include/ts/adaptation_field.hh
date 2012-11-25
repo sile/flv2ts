@@ -44,6 +44,7 @@ namespace flv2ts {
 
         size_t i = 2;
         if(pcr_flag) {
+          buf[i++] = pcr >> 40;
           buf[i++] = pcr >> 32;
           buf[i++] = pcr >> 24;
           buf[i++] = pcr >> 16;

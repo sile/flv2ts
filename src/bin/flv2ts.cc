@@ -242,7 +242,6 @@ void write_video_first(const flv::Tag& tag, const std::string& payload, std::ost
   oph.pes_header_length = 10;
   oph.dts = sec_to_90kHz(static_cast<double>(tag.timestamp) / 1000.0 + PTS_DTS_OFFSET);
   oph.pts = oph.dts + sec_to_90kHz(static_cast<double>(video.composition_time) / 1000.0);
-
   size = pes.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
 
