@@ -67,8 +67,8 @@ namespace flv2ts {
                   ((h.dts_indicator ? 1 : 0) << 6) +
                   ((h.escr_flag ? 1 : 0) << 5) +
                   ((h.es_rate_flag ? 1 : 0) << 4) +
-                  ((h.dsm_trick_mode ? 1 : 0) << 3) +
-                  ((h.additional_copy_info ? 1 : 0) << 2) +
+                  ((h.dsm_trick_mode_flag ? 1 : 0) << 3) +
+                  ((h.additional_copy_info_flag ? 1 : 0) << 2) +
                   ((h.crc_flag ? 1 : 0) << 1) +
                   ((h.extension_flag ? 1 : 0)));
         buf[8] = h.pes_header_length;

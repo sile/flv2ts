@@ -147,12 +147,23 @@ int main(int argc, char** argv) {
                 << "      extension_flag:           " << bool2str(header.extension_flag) << std::endl
                 << "      pes_header_length:        " << (int)header.pes_header_length << std::endl
                 << "      pts:  " << header.pts << std::endl
-                << "      dts:  " << header.dts << std::endl
-                << "      escr: " << header.escr << std::endl
-                << "      es:   " << header.es << std::endl
-                << "      dsm_trick_mode:       " << (int)header.dsm_trick_mode << std::endl
-                << "      additional_copy_info: " << (int)header.additional_copy_info << std::endl
-                << "      pes_crc:              " << header.pes_crc << std::endl;
+                << "      dts:  " << header.dts << std::endl;
+      
+      if(header.escr_flag) {
+        std::cout << "      escr: " << header.escr << std::endl;
+      }
+      if(header.es_rate_flag) {
+        std::cout << "      es:   " << header.es << std::endl;
+      }
+      if(header.dsm_trick_mode_flag) {
+        std::cout << "      dsm_trick_mode:       " << (int)header.dsm_trick_mode << std::endl;
+      }
+      if(header.additional_copy_info_flag) {
+        std::cout << "      additional_copy_info: " << (int)header.additional_copy_info << std::endl;
+      }
+      if(header.crc_flag) {
+        std::cout << "      pes_crc:              " << header.pes_crc << std::endl;
+      }
       std::cout << "    data_size: " << pes.data_size << std::endl;
       break;
     }
