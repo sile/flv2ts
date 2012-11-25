@@ -490,6 +490,7 @@ void write_audio(tw_state& state, const flv::Tag& tag, const std::string& payloa
 bool to_storage_format_sps_pps(const h264::AVCDecoderConfigurationRecord& conf, std::string& buf) {
   for(uint8_t i=0; i < conf.num_of_sequence_parameter_sets; i++) {
     // start code prefix
+    //buf += (char)0; // XXX: 不要?
     buf += (char)0;
     buf += (char)0;
     buf += (char)1;
@@ -498,6 +499,7 @@ bool to_storage_format_sps_pps(const h264::AVCDecoderConfigurationRecord& conf, 
   }
   for(uint8_t i=0; i < conf.num_of_picture_parameter_sets; i++) {
     // start code prefix
+    //buf += (char)0;
     buf += (char)0;
     buf += (char)0;
     buf += (char)1;
@@ -518,7 +520,7 @@ bool to_storage_format(const h264::AVCDecoderConfigurationRecord& conf,
     }
 
     // start code prefix
-    buf += (char)0;
+    //buf += (char)0;
     buf += (char)0;
     buf += (char)0;
     buf += (char)1;

@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
   
   // PAT/PMT
   write_ts_start(ts_out);
-
+  bool video_first = true;
   for(; ! flv.eos();) {
     flv::Tag tag;
     uint32_t prev_tag_size;
@@ -128,14 +128,16 @@ int main(int argc, char** argv) {
         std::string buf;
 
         // TODO: 既に payload に SPS/PPS が含まれているかのチェック
-        to_storage_format_sps_pps(conf, buf);  // payloadに SPS/PPS も含める
+        if(video_first) {
+          to_storage_format_sps_pps(conf, buf);  // payloadに SPS/PPS も含める
+          video_first = false;
+        }
 
         if(! to_storage_format(conf, tag.video.payload, tag.video.payload_size, buf)) {
           std::cerr << "to_strage_format() failed" << std::endl;
           return 1;
         }
         write_video(state, tag, buf, ts_out);
-        
         break;
       }
       case 2: {
@@ -153,6 +155,6 @@ int main(int argc, char** argv) {
       break;
     }
   }
-  
+
   return 0;
 }
