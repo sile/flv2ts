@@ -49,6 +49,14 @@ namespace flv2ts {
       
       size_t size() const { return _size; } 
 
+      bool advise(size_t offset, size_t length) {
+        const size_t page_size = 4096; // XXX:
+
+        offset = offset - offset % page_size;
+        length = length + offset % page_size;
+        
+        return madvise(ptr<void>(offset), length, MADV_SEQUENTIAL) == 0;
+      }
     private:
       void* _ptr;
       size_t _size;

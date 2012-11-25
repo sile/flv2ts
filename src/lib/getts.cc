@@ -61,7 +61,7 @@ namespace {
       std::cerr << "Can't open file(3): " << flv_path << " [" << start_state.pos << ".." << end_state.pos << "]" << std::endl;
       return 0;
     }
-  
+
     flv::Parser flv(flv_mm, start_state.pos, end_state.pos);
     if(! flv) {
       std::cerr << "flv parser initialization failed" << std::endl;

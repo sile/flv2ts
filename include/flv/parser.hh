@@ -25,6 +25,11 @@ namespace flv2ts {
       Parser(aux::FileMappedMemory& fmm, size_t start, size_t end) 
         : _fmm(fmm),
           _in(_fmm.ptr<const uint8_t>(start), end - start) {
+        /*
+        if(! _fmm.advise(start, end - start)) {
+          std::cerr << "advice failed: " << errno << std::endl;
+        }
+        */
       }
 
       operator bool() const { return _fmm && _in; }
