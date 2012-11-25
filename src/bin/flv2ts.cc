@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
   
   uint64_t next_timestamp = 0;
   h264::AVCDecoderConfigurationRecord conf;
-  bool conf_read = false;
+  bool sps_pps_write = false;
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
@@ -88,17 +88,11 @@ int main(int argc, char** argv) {
       }
       std::cout << "open: " << buf << std::endl;
       
+      sps_pps_write = false;
       switched = false;
       ts_seq++;
       next_timestamp = tag.timestamp + duration * 1000;
       write_ts_start(ts_out);
-
-      // TODO: 既に SPS/PPS があるかのチェック
-      if(conf_read) {
-        std::string buf2;
-        to_storage_format_sps_pps(conf, buf2); 
-        write_video(state, tag, buf2, ts_out);
-      }
     }
 
     switch(tag.type) {
@@ -140,18 +134,18 @@ int main(int argc, char** argv) {
           std::cerr << "parse AVCDecoderConfigurationRecord failed" << std::endl;
           return 1;
         }
-
-        conf_read = true;
-        // TODO: 既に SPS/PPS があるかのチェック
-        std::string buf;
-        to_storage_format_sps_pps(conf, buf); 
-        write_video(state, tag, buf, ts_out);
-        
         break;
       }
       case 1: {
         // AVC NALU
         std::string buf;
+
+        if(! sps_pps_write) {
+          // TODO: 既に payload に SPS/PPS が含まれているかのチェック
+          to_storage_format_sps_pps(conf, buf);  // payloadに SPS/PPS も含める
+          sps_pps_write = true;
+        }
+        
         if(! to_storage_format(conf, tag.video.payload, tag.video.payload_size, buf)) {
           std::cerr << "to_strage_format() failed" << std::endl;
           return 1;

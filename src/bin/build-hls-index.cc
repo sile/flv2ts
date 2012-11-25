@@ -69,6 +69,8 @@ int main(int argc, char** argv) {
     }
     
     if(flv.eos()) {
+      // last 
+      ts_index.write(reinterpret_cast<const char*>(&prev_position), sizeof(uint32_t)); // XXX: native-endian
       break;
     }
 
@@ -143,8 +145,6 @@ int main(int argc, char** argv) {
       break;
     }
   }
-  uint32_t end_position = flv.position();
-  ts_index.write(reinterpret_cast<const char*>(&end_position), sizeof(uint32_t)); // XXX: native-endian
 
   // output m3u8 tail
   m3u8 << "#EXT-X-ENDLIST" << std::endl;

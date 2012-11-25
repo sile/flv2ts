@@ -76,29 +76,15 @@ int main(int argc, char** argv) {
   std::ostream& ts_out = std::cout;
   tw_state state;
   
-  // PAT/PMT(ts), SPS/PPS(h264)
-  { 
-    flv::Tag tag; // XXX:
-    tag.timestamp = 0;
-    tag.video.composition_time = 0;
-    tag.video.frame_type = flv::VideoTag::FRAME_TYPE_INTER;
+  // PAT/PMT
+  write_ts_start(ts_out);
 
-    std::string buf;
-    write_ts_start(ts_out);
-    to_storage_format_sps_pps(conf, buf); 
-    write_video(state, tag, buf, ts_out);
-  }
-  
-  for(;;) {
+  for(; ! flv.eos();) {
     flv::Tag tag;
     uint32_t prev_tag_size;
     if(! flv.parseTag(tag, prev_tag_size)) {
       std::cerr << "parse flv tag failed" << std::endl;
       return 1;
-    }
-    
-    if(flv.eos()) {
-      break;
     }
 
     switch(tag.type) {
@@ -140,6 +126,10 @@ int main(int argc, char** argv) {
       case 1: {
         // AVC NALU
         std::string buf;
+
+        // TODO: 既に payload に SPS/PPS が含まれているかのチェック
+        to_storage_format_sps_pps(conf, buf);  // payloadに SPS/PPS も含める
+
         if(! to_storage_format(conf, tag.video.payload, tag.video.payload_size, buf)) {
           std::cerr << "to_strage_format() failed" << std::endl;
           return 1;
