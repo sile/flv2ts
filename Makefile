@@ -1,7 +1,7 @@
-OPT=-g -Wall -Werror -Iinclude
+OPT=-O3 -Wall -Werror -Iinclude
 
 #ALL=parse-flv flv2ts parse-ts ts-extract flv-extract build-hls-index getts
-ALL=getts build-hls-index
+ALL=getts build-hls-index flv2ts
 
 all: ${ALL}
 

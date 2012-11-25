@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -30,19 +31,6 @@ namespace flv2ts {
         }
         _size = statbuf.st_size;
         _ptr = mmap(0, _size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0);
-
-	close(fd);
-      }
-
-      FileMappedMemory(const char* filepath, size_t start, size_t end)
-        : _ptr(MAP_FAILED), _size(end - start) 
-      {
-        int fd = open(filepath, O_RDWR);
-        if(fd == -1) {
-          return;
-        }
-
-        _ptr = mmap(0, _size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, start);
 
 	close(fd);
       }
