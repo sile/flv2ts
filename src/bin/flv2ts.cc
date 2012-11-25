@@ -218,7 +218,7 @@ void write_video_first(const flv::Tag& tag, std::ostream& out, size_t& data_offs
   pes.stream_id = VIDEO_STREAM_ID;
 
   const unsigned optional_header_size = 13;
-  pes.pes_packet_length = optional_header_size + video.payload_size;
+  pes.pes_packet_length = optional_header_size + video.payload_size; // XXX: video.payload_size が 2byte を超過する時がある
 
   ts::OptionalPESHeader& oph = pes.optional_header;
   oph.marker_bits = 2;
