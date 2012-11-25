@@ -41,8 +41,8 @@ int main(int argc, char** argv) {
   }
 
   // read ts index
-  uint32_t start_pos = 0;
-  uint32_t end_pos = 0;
+  seq_state start_state;
+  seq_state end_state;
   {
     aux::FileMappedMemory index_mm((prefix + ".ts_idx").c_str());
     if(! index_mm) {
@@ -55,18 +55,18 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    start_pos = *index_mm.ptr<uint32_t>((sequence+0) * sizeof(uint32_t));
-    end_pos   = *index_mm.ptr<uint32_t>((sequence+1) * sizeof(uint32_t));
+    start_state = *index_mm.ptr<seq_state>((sequence+0) * sizeof(seq_state));
+    end_state   = *index_mm.ptr<seq_state>((sequence+1) * sizeof(seq_state));
   }
 
   // flv open
   aux::FileMappedMemory flv_mm(flv_path.c_str());
   if(! flv_mm) {
-    std::cerr << "Can't open file: " << flv_path << " [" << start_pos << ".." << end_pos << "]" << std::endl;
+    std::cerr << "Can't open file: " << flv_path << " [" << start_state.pos << ".." << end_state.pos << "]" << std::endl;
     return 1;
   }
   
-  flv::Parser flv(flv_mm, start_pos, end_pos);
+  flv::Parser flv(flv_mm, start_state.pos, end_state.pos);
   if(! flv) {
     std::cerr << "flv parser initialization failed" << std::endl;
     return 1;
@@ -75,7 +75,9 @@ int main(int argc, char** argv) {
   // output ts
   std::ostream& ts_out = std::cout;
   tw_state state;
-  
+  state.video_counter = start_state.video_counter;
+  state.audio_counter = start_state.audio_counter;
+
   // PAT/PMT
   write_ts_start(ts_out);
   bool video_first = true;

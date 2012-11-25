@@ -10,6 +10,8 @@
 #include <h264/avc_decoder_configuration_record.hh>
 #include <h264/avc_sample.hh>
 
+#include "ts_write.hh"
+
 using namespace flv2ts;
 
 int main(int argc, char** argv) {
@@ -56,13 +58,20 @@ int main(int argc, char** argv) {
 
   unsigned ts_seq=0;
   bool switched=true;
-
+  
   // flv body
+  std::fstream null_out("/dev/null", std::ios::out|std::ios::binary); // XXX:
+
+  h264::AVCDecoderConfigurationRecord conf;
+  bool sps_pps_write = false;
+  tw_state state;
+  seq_state sq_state;
+
   uint64_t next_timestamp = 0;
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
-    uint32_t prev_position = flv.position();
+    sq_state.pos = flv.position();
     if(! flv.parseTag(tag, prev_tag_size)) {
       std::cerr << "parse flv tag failed" << std::endl;
       return 1;
@@ -70,7 +79,9 @@ int main(int argc, char** argv) {
     
     if(flv.eos()) {
       // last 
-      ts_index.write(reinterpret_cast<const char*>(&prev_position), sizeof(uint32_t)); // XXX: native-endian
+      sq_state.audio_counter = state.audio_counter % 16;
+      sq_state.video_counter = state.video_counter % 16;
+      ts_index.write(sq_state.to_char(), sizeof(sq_state));
       break;
     }
 
@@ -85,12 +96,15 @@ int main(int argc, char** argv) {
     }
 
     if(switched) {
-      ts_index.write(reinterpret_cast<const char*>(&prev_position), sizeof(uint32_t)); // XXX: native-endian
+      sq_state.audio_counter = state.audio_counter % 16;
+      sq_state.video_counter = state.video_counter % 16;
+      ts_index.write(sq_state.to_char(), sizeof(sq_state));
 
       m3u8 << "#EXTINF:" << duration << std::endl
            << basename(output_prefix.c_str()) << "-" << ts_seq << ".ts" << std::endl 
            << std::endl;
-      
+
+      sps_pps_write = false;      
       switched = false;
       ts_seq++;
       next_timestamp = tag.timestamp + duration * 1000;
@@ -99,6 +113,24 @@ int main(int argc, char** argv) {
     switch(tag.type) {
     case flv::Tag::TYPE_AUDIO: {
       // audio
+      if(tag.audio.sound_format != 10) { // 10=AAC
+        std::cerr << "unsupported audio format: " << tag.audio.sound_format << std::endl;
+        return 1;
+      }
+      if(tag.audio.aac_packet_type == 0) {
+        // AudioSpecificConfig
+        continue;
+      }
+
+      adts::Header adts = adts::Header::make_default(tag.audio.payload_size);
+      char buf[7];
+      adts.dump(buf, 7);
+      
+      std::string buf2;
+      buf2.assign(buf, 7); // TODO: 既にADTSヘッダが付いているかのチェック
+      buf2.append(reinterpret_cast<const char*>(tag.audio.payload), tag.audio.payload_size);
+      
+      write_audio(state, tag, buf2, null_out);
       break;
     }
       
@@ -112,7 +144,6 @@ int main(int argc, char** argv) {
       switch(tag.video.avc_packet_type) {
       case 0: {
         // AVC sequence header
-        h264::AVCDecoderConfigurationRecord conf;
         aux::ByteStream conf_in(tag.video.payload, tag.video.payload_size);
         if(! conf.parse(conf_in)) {
           std::cerr << "parse AVCDecoderConfigurationRecord failed" << std::endl;
@@ -129,6 +160,20 @@ int main(int argc, char** argv) {
       }
       case 1: {
         // AVC NALU
+        // XXX: 既に conf が読み込まれていることが前提
+        std::string buf;
+
+        if(! sps_pps_write) {
+          // TODO: 既に payload に SPS/PPS が含まれているかのチェック
+          to_storage_format_sps_pps(conf, buf);  // payloadに SPS/PPS も含める
+          sps_pps_write = true;
+        }
+        
+        if(! to_storage_format(conf, tag.video.payload, tag.video.payload_size, buf)) {
+          std::cerr << "to_strage_format() failed" << std::endl;
+          return 1;
+        }
+        write_video(state, tag, buf, null_out);
         break;
       }
       case 2: {

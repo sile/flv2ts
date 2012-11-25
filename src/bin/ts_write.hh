@@ -172,6 +172,15 @@ struct tw_state {
     , discontinuity(false) {}
 };
 
+// XXX:
+struct seq_state {
+  uint32_t pos;
+  uint8_t audio_counter;
+  uint8_t video_counter;
+
+  const char* to_char() const { return reinterpret_cast<const char*>(this); }
+};
+
 void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& payload, std::ostream& out, size_t& data_offset,
                        size_t stuffing_byte_size=0) {
   const flv::VideoTag& video = tag.video;
@@ -192,7 +201,7 @@ void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& 
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 3; // payload and adaptation_field
-  h.continuity_counter = (state.video_counter++) % 16; // XXX:
+  h.continuity_counter = state.video_counter++ % 16; // XXX:
   
   size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
@@ -283,7 +292,7 @@ void write_video_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 1; // payload only
-  h.continuity_counter = (state.video_counter++) % 16;
+  h.continuity_counter = state.video_counter++ % 16;
   
   if(payload.size() - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
     h.adaptation_field_exist |= 2;
@@ -349,7 +358,7 @@ void write_audio_first(tw_state& state, const flv::Tag& tag, const std::string& 
   h.pid = ES_AUDIO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 3; // payload and adaptation_field
-  h.continuity_counter = (state.audio_counter++) % 16; // XXX:
+  h.continuity_counter = state.audio_counter++ % 16; // XXX:
   
   size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
@@ -436,8 +445,8 @@ void write_audio_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   h.pid = ES_AUDIO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 1; // payload only
-  h.continuity_counter = (state.audio_counter++) % 16;
-  
+  h.continuity_counter = state.audio_counter++ % 16;
+    
   if(payload.size() - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
     h.adaptation_field_exist |= 2;
   }
