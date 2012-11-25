@@ -24,7 +24,6 @@ const static double PTS_DTS_OFFSET = 0.1;
 
 static unsigned g_counter = 0; // XXX:
 static unsigned g_audio_counter = 0; // XXX:
-static uint64_t g_prev_pcr = 0;
 
 void write_ts_pat(std::ostream& out) {
   char buf[256];
@@ -209,7 +208,6 @@ void write_video_first(const flv::Tag& tag, const std::string& payload, std::ost
 
   uint64_t pcr = sec_to_90kHz(static_cast<double>(tag.timestamp) / 1000.0);
   af.pcr = (pcr << 15) + (0x3F << 9);
-  g_prev_pcr = pcr;
 
   af.adaptation_field_length = 7 + stuffing_byte_size;
   
@@ -565,6 +563,7 @@ int main(int argc, char** argv) {
   std::ofstream ts_out;
 
   // flv body
+  uint64_t next_timestamp = 0;
   h264::AVCDecoderConfigurationRecord conf;
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
@@ -576,6 +575,16 @@ int main(int argc, char** argv) {
     
     if(flv.eos()) {
       break;
+    }
+
+    if(next_timestamp <= static_cast<uint64_t>(tag.timestamp) &&
+       tag.type == flv::Tag::TYPE_VIDEO &&
+       tag.video.codec_id == 7 &&
+       tag.video.avc_packet_type == 1) {
+      if(tag.video.frame_type != flv::VideoTag::FRAME_TYPE_KEY) {
+        std::cerr << "[warn] not key frame: timestamp=" << tag.timestamp << std::endl;
+      }
+      switched = true;
     }
 
     if(switched) {
@@ -592,7 +601,7 @@ int main(int argc, char** argv) {
       
       switched = false;
       ts_seq++;
-
+      next_timestamp = tag.timestamp + duration * 1000;
       write_ts_start(ts_out);
     }
 
@@ -613,7 +622,7 @@ int main(int argc, char** argv) {
       adts.dump(buf, 7);
       
       std::string buf2;
-      // buf2.assign(buf, 7);
+      // buf2.assign(buf, 7); // ADTSヘッダは不要
       buf2.append(reinterpret_cast<const char*>(tag.audio.payload), tag.audio.payload_size);
       
       write_audio(tag, buf2, ts_out);
