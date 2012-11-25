@@ -1,8 +1,8 @@
 OPT=-g -Wall -Werror -Iinclude
 
 #ALL=parse-flv flv2ts parse-ts ts-extract flv-extract
-#ALL=flv2ts
-ALL=flv-extract
+ALL=flv2ts
+#ALL=flv-extract
 
 all: ${ALL}
 
