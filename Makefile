@@ -1,7 +1,7 @@
 OPT=-O3 -Wall -Werror -Iinclude
 
-#ALL=parse-flv flv2ts parse-ts ts-extract flv-extract build-hls-index getts
-ALL=getts build-hls-index flv2ts
+#ALL=parse-flv flv2ts parse-ts ts-extract flv-extract build-hls-index getts libgetts
+ALL=getts build-hls-index flv2ts libgetts
 
 all: ${ALL}
 
@@ -32,3 +32,9 @@ build-hls-index: src/bin/build-hls-index.cc
 getts: src/bin/getts.cc
 	mkdir -p bin
 	g++ ${OPT} -o bin/${@} src/bin/${@}.cc
+
+libgetts: src/lib/getts.cc
+	mkdir -p lib
+	g++ -fPIC ${OPT} -c src/lib/getts.cc
+	g++ -shared -Wl,-soname=${@}.so.1 -o lib/${@}.so.1.0.0 getts.o
+	rm -f *.o
