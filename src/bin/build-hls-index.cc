@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
+    uint32_t prev_position = flv.position();
     if(! flv.parseTag(tag, prev_tag_size)) {
       std::cerr << "parse flv tag failed" << std::endl;
       return 1;
@@ -82,7 +83,7 @@ int main(int argc, char** argv) {
     }
 
     if(switched) {
-      ts_index.write(reinterpret_cast<const char*>(&ts_seq), 4); // XXX: native-endian
+      ts_index.write(reinterpret_cast<const char*>(&prev_position), sizeof(uint32_t)); // XXX: native-endian
 
       m3u8 << "#EXTINF:" << duration << std::endl
            << basename(output_prefix.c_str()) << "-" << ts_seq << ".ts" << std::endl 
@@ -142,6 +143,8 @@ int main(int argc, char** argv) {
       break;
     }
   }
+  uint32_t end_position = flv.position();
+  ts_index.write(reinterpret_cast<const char*>(&end_position), sizeof(uint32_t)); // XXX: native-endian
 
   // output m3u8 tail
   m3u8 << "#EXT-X-ENDLIST" << std::endl;
