@@ -162,10 +162,14 @@ uint64_t sec_to_90kHz(double sec) {
 
 // ts_write state
 struct tw_state {
-  unsigned counter;
+  unsigned audio_counter;
+  unsigned video_counter;
   bool discontinuity;
 
-  tw_state() : counter(0), discontinuity(false) {}
+  tw_state() 
+    : audio_counter(0)
+    , video_counter(0)
+    , discontinuity(false) {}
 };
 
 void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& payload, std::ostream& out, size_t& data_offset,
@@ -188,7 +192,7 @@ void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& 
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 3; // payload and adaptation_field
-  h.continuity_counter = (state.counter++) % 16; // XXX:
+  h.continuity_counter = (state.video_counter++) % 16; // XXX:
   
   size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
@@ -246,7 +250,7 @@ void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& 
     size_t delta =  (ts::Packet::SIZE - wrote_size) - payload.size();
     // XXX: 暫定
     data_offset = 0;
-    state.counter--;
+    state.video_counter--;
     write_video_first(state, tag, payload, out, data_offset, delta);
     return;
   }
@@ -279,7 +283,7 @@ void write_video_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   h.pid = ES_VIDEO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 1; // payload only
-  h.continuity_counter = (state.counter++) % 16;
+  h.continuity_counter = (state.video_counter++) % 16;
   
   if(payload.size() - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
     h.adaptation_field_exist |= 2;
@@ -345,7 +349,7 @@ void write_audio_first(tw_state& state, const flv::Tag& tag, const std::string& 
   h.pid = ES_AUDIO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 3; // payload and adaptation_field
-  h.continuity_counter = (state.counter++) % 16; // XXX:
+  h.continuity_counter = (state.audio_counter++) % 16; // XXX:
   
   size = h.dump(buf + wrote_size, sizeof(buf) - wrote_size);
   wrote_size += size;
@@ -401,7 +405,7 @@ void write_audio_first(tw_state& state, const flv::Tag& tag, const std::string& 
     size_t delta =  (ts::Packet::SIZE - wrote_size) - payload.size();
     // XXX: 暫定
     data_offset = 0;
-    state.counter--;
+    state.audio_counter--;
     write_audio_first(state, tag, payload, out, data_offset, delta);
     return;
   }
@@ -432,7 +436,7 @@ void write_audio_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   h.pid = ES_AUDIO_PID;
   h.scrambling_control = 0;
   h.adaptation_field_exist = 1; // payload only
-  h.continuity_counter = (state.counter++) % 16;
+  h.continuity_counter = (state.audio_counter++) % 16;
   
   if(payload.size() - data_offset < ( ts::Packet::SIZE - wrote_size - 3)) { // XXX: いろいろ
     h.adaptation_field_exist |= 2;
