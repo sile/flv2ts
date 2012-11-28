@@ -15,6 +15,8 @@
 
 using namespace flv2ts;
 
+const unsigned PAT_PMT_INTERVAL=50; // PAT,PMTを書き出す間隔 (現状決め打ち)
+
 int main(int argc, char** argv) {
   if(argc != 4) {
     std::cerr << "Usage: getts FLV_FILE HLS_INDEX_PREFIX SEQUNCE" << std::endl;
@@ -80,6 +82,8 @@ int main(int argc, char** argv) {
 
   // PAT/PMT
   write_ts_start(ts_out);
+  unsigned next_prev_pat_pmt_output = g_output_ts_count + PAT_PMT_INTERVAL;
+
   bool video_first = true;
   for(; ! flv.eos();) {
     flv::Tag tag;
@@ -87,6 +91,11 @@ int main(int argc, char** argv) {
     if(! flv.parseTag(tag, prev_tag_size)) {
       std::cerr << "parse flv tag failed" << std::endl;
       return 1;
+    }
+
+    if(next_prev_pat_pmt_output <= g_output_ts_count) {
+      write_ts_start(ts_out);
+      next_prev_pat_pmt_output = g_output_ts_count + PAT_PMT_INTERVAL;
     }
 
     switch(tag.type) {

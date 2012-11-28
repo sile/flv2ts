@@ -13,6 +13,8 @@
 #include "ts_write.hh"
 using namespace flv2ts;
 
+const unsigned PAT_PMT_INTERVAL=50; // PAT,PMTを書き出す間隔 (現状決め打ち)
+
 int main(int argc, char** argv) {
   if(argc != 4) {
     std::cerr << "Usage: flv2ts INPUT_FLV_FILE OUTPUT_TS_PREFIX DURATION" << std::endl;
@@ -54,6 +56,8 @@ int main(int argc, char** argv) {
   uint64_t next_timestamp = 0;
   h264::AVCDecoderConfigurationRecord conf;
   bool sps_pps_write = false;
+  unsigned next_prev_pat_pmt_output = 0;
+
   for(size_t kk=0;; kk++) {
     flv::Tag tag;
     uint32_t prev_tag_size;
@@ -92,7 +96,13 @@ int main(int argc, char** argv) {
       switched = false;
       ts_seq++;
       next_timestamp = tag.timestamp + duration * 1000;
+      
+      next_prev_pat_pmt_output = 0;
+    }
+
+    if(next_prev_pat_pmt_output <= g_output_ts_count) {
       write_ts_start(ts_out);
+      next_prev_pat_pmt_output = g_output_ts_count + PAT_PMT_INTERVAL;
     }
 
     switch(tag.type) {

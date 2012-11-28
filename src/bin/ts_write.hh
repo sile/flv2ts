@@ -15,6 +15,9 @@ const static unsigned AUDIO_STREAM_ID = 192;
 const static unsigned PMT_TABLE_ID = 2;
 const static double PTS_DTS_OFFSET = 0.1;
 
+
+unsigned g_output_ts_count = 0; // XXX:
+
 void write_ts_pat(std::ostream& out) {
   char buf[256];
   ssize_t size;
@@ -70,7 +73,8 @@ void write_ts_pat(std::ostream& out) {
   for(; wrote_size < ts::Packet::SIZE; wrote_size++) {
     buf[wrote_size] = (char)0xFF;
   }
-
+  
+  g_output_ts_count++;
   out.write(buf, wrote_size);
 }
 
@@ -145,6 +149,7 @@ void write_ts_pmt(std::ostream& out) {
     buf[wrote_size] = (char)0xFF;
   }
 
+  g_output_ts_count++;
   out.write(buf, wrote_size);
 }
 
@@ -269,6 +274,7 @@ void write_video_first(tw_state& state, const flv::Tag& tag, const std::string& 
   pes.data_size = ts::Packet::SIZE - wrote_size;
   pes.data = reinterpret_cast<const uint8_t*>(payload.data());
   out.write(reinterpret_cast<const char*>(pes.data), pes.data_size);
+  g_output_ts_count++;
 
   data_offset += pes.data_size;
 }
@@ -329,6 +335,8 @@ void write_video_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   
   // pes: data
   out.write(payload.data()+data_offset, rest_size);
+  g_output_ts_count++;
+
   data_offset += rest_size;
 }
 
@@ -424,6 +432,7 @@ void write_audio_first(tw_state& state, const flv::Tag& tag, const std::string& 
   pes.data_size = ts::Packet::SIZE - wrote_size;
   pes.data = reinterpret_cast<const uint8_t*>(payload.data());
   out.write(reinterpret_cast<const char*>(pes.data), pes.data_size);
+  g_output_ts_count++;
 
   data_offset += pes.data_size;
 }
@@ -482,6 +491,8 @@ void write_audio_rest(tw_state& state, const flv::Tag& tag, const std::string& p
   
   // pes: data
   out.write(payload.data()+data_offset, rest_size);
+  g_output_ts_count++;
+
   data_offset += rest_size;
 }
 
